@@ -11,31 +11,48 @@ import Charts
 
 struct ExchangeRateChartView: View {
     let rates: [Double]
+    let dates: [String] // Datas correspondentes às taxas
 
     var body: some View {
         Chart {
+            // Gráfico de linha simples
             ForEach(Array(rates.enumerated()), id: \.offset) { index, rate in
                 LineMark(
-                    x: .value("Dia", index),
+                    x: .value("Data", dates[index]),
                     y: .value("Taxa", rate)
                 )
+                .interpolationMethod(.cardinal) // Suaviza a linha
+                .foregroundStyle(Color.red) // Cor da linha
+                .lineStyle(StrokeStyle(lineWidth: 2)) // Linha mais fina
             }
         }
         .chartYAxis {
-            AxisMarks(values: .stride(by: 10)) {
-                AxisValueLabel()
+            AxisMarks(values: .stride(by: 10)) { value in
+                AxisValueLabel {
+                    Text("\(value.as(Double.self) ?? 0.0, specifier: "%.0f")")
+                        .font(.title3) // Fonte grande para o eixo Y
+                        .foregroundColor(.primary) // Cor padrão para o texto
+                }
             }
         }
-        .chartYScale(domain: calculateYAxisDomain()) // Ajusta o limite inferior
         .chartXAxis {
-            AxisMarks() // Sem rótulos no eixo X
+            AxisMarks(values: Array(stride(from: 0, to: dates.count, by: 10))) { value in
+                AxisValueLabel {
+                    if let index = value.as(Int.self), index < dates.count {
+                        Text(dates[index])
+                            .font(.title3) // Fonte grande para o eixo X
+                            .foregroundColor(.primary) // Cor padrão para o texto
+                    }
+                }
+            }
         }
+        .chartYScale(domain: calculateYAxisDomain()) // Ajusta o limite do eixo Y
     }
 
     /// Calcula o domínio do eixo Y com base nos valores
     private func calculateYAxisDomain() -> ClosedRange<Double> {
-        let minRate = rates.min() ?? 0.0
-        let maxRate = rates.max() ?? 0.0
-        return (minRate - 20)...(maxRate)
+        let minRate = rates.min() ?? 720.0
+        let maxRate = rates.max() ?? 780.0
+        return (minRate - 5)...(maxRate + 5)
     }
 }

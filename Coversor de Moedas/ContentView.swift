@@ -3,7 +3,7 @@
 //  Conversor de Moedas
 //
 //  Este módulo gerencia a interface do usuário, incluindo a atualização diária,
-//  armazenamento de até 30 valores, e exibição de um gráfico de variação.
+//  armazenamento de até 30 valores e exibição de um gráfico de variação.
 //  Criado por Bruno Maciel em 28/11/2024.
 //
 
@@ -19,6 +19,7 @@ struct ContentView: View {
     @State private var currentRate: Double = 727.40 // Valor atual inicial
     @State private var previousRate: Double? = nil // Valor anterior para comparação
     @State private var storedRates: [Double] = Array(repeating: 727.40, count: 30) // Lista de valores
+    @State private var storedDates: [String] = [] // Datas simuladas
 
     private let currencies = ["USD", "BRL", "EUR", "COP"] // Lista de moedas disponíveis
     private let conversor = ConversorDeMoedas() // Instância do módulo de conversão
@@ -36,11 +37,11 @@ struct ContentView: View {
                 TextField("Digite o valor", text: $amount)
                     .keyboardType(.decimalPad)
                     .padding()
-                    .background(Color(.systemGray6))
+                    .background(Color(isLoading ? .systemGray4 : .systemGray6))
                     .cornerRadius(10)
                     .overlay(
                         RoundedRectangle(cornerRadius: 10)
-                            .stroke(Color.blue, lineWidth: 1)
+                            .stroke(isLoading ? Color.red : Color.blue, lineWidth: 1)
                     )
 
                 // Seletores de moeda
@@ -62,11 +63,18 @@ struct ContentView: View {
                 currentRateView()
 
                 // Gráfico da variação
-                ExchangeRateChartView(rates: storedRates)
-                    .frame(height: 200)
-                    .padding()
+                let validCount = min(storedRates.count, storedDates.count)
+                let validRates = Array(storedRates.prefix(validCount))
+                let validDates = Array(storedDates.prefix(validCount))
+                
+                ExchangeRateChartView(
+                    rates: validRates,
+                    dates: validDates
+                )
+                .frame(height: 200)
+                .padding()
 
-                Spacer() // Espaço flexível para organizar os elementos
+                Spacer()
             }
             .padding()
             .onAppear {
@@ -147,11 +155,8 @@ struct ContentView: View {
 
     // Agendar atualização diária
     private func scheduleDailyUpdate() {
-        Timer.scheduledTimer(withTimeInterval: 86400, repeats: true) { _ in
-            let currentHour = Calendar.current.component(.hour, from: Date())
-            if currentHour == 10 {
-                fetchDailyExchangeRate()
-            }
+        NotificationManager.shared.scheduleDailyUpdate {
+            fetchDailyExchangeRate()
         }
     }
 
@@ -163,14 +168,16 @@ struct ContentView: View {
                     previousRate = currentRate
                     currentRate = rate
 
-                    // Adicionar à lista e armazenar
+                    // Atualiza taxas e datas
                     storedRates.append(rate)
+                    storedDates.append(DateFormatter.localizedString(from: Date(), dateStyle: .short, timeStyle: .none))
+
                     if storedRates.count > 30 {
                         storedRates.removeFirst()
+                        storedDates.removeFirst()
                     }
-                    saveStoredRates()
 
-                    // Usar NotificationManager para enviar notificação
+                    saveStoredRates()
                     NotificationManager.shared.sendNotification(for: rate)
                 }
             }
@@ -180,14 +187,21 @@ struct ContentView: View {
     // Salvar as taxas armazenadas
     private func saveStoredRates() {
         UserDefaults.standard.set(storedRates, forKey: "storedRates")
+        UserDefaults.standard.set(storedDates, forKey: "storedDates")
     }
 
     // Carregar as taxas armazenadas
     private func loadStoredRates() {
-        if let rates = UserDefaults.standard.array(forKey: "storedRates") as? [Double] {
+        if let rates = UserDefaults.standard.array(forKey: "storedRates") as? [Double],
+           let dates = UserDefaults.standard.array(forKey: "storedDates") as? [String] {
             storedRates = rates
+            storedDates = dates
             currentRate = storedRates.last ?? 727.40
             previousRate = storedRates.dropLast().last
+        } else {
+            // Gera valores iniciais se os dados não existirem
+            storedRates = Array(repeating: 727.40, count: 30)
+            storedDates = generateDates(for: storedRates.count)
         }
     }
 
@@ -198,18 +212,31 @@ struct ContentView: View {
             return
         }
 
-        isLoading = true // Indica que a conversão está em andamento
+        isLoading = true
         conversor.fetchExchangeRate(from: fromCurrency, to: toCurrency) { rate in
             DispatchQueue.main.async {
-                self.isLoading = false // Finaliza o carregamento
+                self.isLoading = false
                 if let rate = rate {
-                    // Calcula o valor convertido
                     self.convertedAmount = String(format: "%.2f", value * rate)
                 } else {
                     self.convertedAmount = "Erro na conversão"
                 }
             }
         }
+    }
+
+    // Gera as últimas `count` datas para o gráfico
+    private func generateDates(for count: Int) -> [String] {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "dd MMM"
+
+        var dates = [String]()
+        for i in stride(from: count - 1, through: 0, by: -1) {
+            if let date = Calendar.current.date(byAdding: .day, value: -i, to: Date()) {
+                dates.append(formatter.string(from: date))
+            }
+        }
+        return dates
     }
 }
 
