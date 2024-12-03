@@ -48,6 +48,11 @@ struct ContentView: View {
             .onAppear {
                 NotificationManager.shared.requestPermission()
                 loadStoredRates()
+                
+                // Agendar atualizações às 10h e 12h, de segunda a sexta
+                NotificationManager.shared.scheduleDailyUpdates(at: [10, 12]) {
+                    fetchDailyExchangeRate()
+                }
             }
         }
     }
