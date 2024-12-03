@@ -3,10 +3,11 @@
 //  Conversor de Moedas
 //
 //  Este módulo gerencia a interface do usuário, exibindo a taxa de câmbio
-//  atual e um gráfico de histórico. Atualizado para remover entrada de valor
-//  e seleção de moeda.
-//  Criado por Bruno Maciel em 28/11/2024.
+//  atual e um gráfico de histórico.
+//  Criado por Bruno Maciel.
 //
+
+// Commit: Removida entrada de valor e seleção de moeda, mantendo apenas "1 BRL para COP".
 
 import SwiftUI
 import Charts
@@ -78,6 +79,7 @@ struct ContentView: View {
             fetchDailyExchangeRate()
         }) {
             Text("Atualizar")
+                .font(.title) // Aumenta a fonte para um tamanho maior
                 .padding()
                 .frame(maxWidth: .infinity)
                 .background(Color.blue)
@@ -104,11 +106,11 @@ struct ContentView: View {
                     storedRates.append(rate)
                     storedDates.append(generateDate())
 
-                    // Mantém no máximo 30 entradas
-                    if storedRates.count > 30 {
+                    // Mantém no máximo 160 entradas
+                    if storedRates.count > 160 {
                         storedRates.removeFirst()
                     }
-                    if storedDates.count > 30 {
+                    if storedDates.count > 160 {
                         storedDates.removeFirst()
                     }
 
