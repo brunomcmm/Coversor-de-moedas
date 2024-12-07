@@ -6,8 +6,8 @@
 //  atual e um gráfico de histórico.
 //  Criado por Bruno Maciel.
 //
-
-// Commit: Removida entrada de valor e seleção de moeda, mantendo apenas "1 BRL para COP".
+//  Commit: Removida entrada de valor e seleção de moeda, mantendo apenas "1 BRL para COP".
+//  Implementado suporte para agendamento de atualizações automáticas (10h e 12h) apenas em dias úteis.
 
 import SwiftUI
 import Charts
@@ -51,9 +51,7 @@ struct ContentView: View {
                 loadStoredRates()
                 
                 // Agendar atualizações às 10h e 12h, de segunda a sexta
-                NotificationManager.shared.scheduleDailyUpdates(at: [10, 12]) {
-                    fetchDailyExchangeRate()
-                }
+                NotificationManager.shared.scheduleDailyUpdates(at: [10, 12])
             }
         }
     }

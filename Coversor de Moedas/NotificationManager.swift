@@ -2,8 +2,8 @@
 //  NotificationManager.swift
 //  Conversor de Moedas
 //
-//  Implementado sistema de atualizações automáticas duas vezes ao dia (10h e 12h) apenas em dias úteis (segunda a sexta).
-//  Criado por Bruno Maciel em 29/11/2024.
+//  Commit: Implementado sistema de atualizações automáticas duas vezes ao dia (10h e 12h) apenas em dias úteis (segunda a sexta).
+//  Criado por Bruno Maciel.
 //
 
 import Foundation
@@ -26,19 +26,37 @@ class NotificationManager {
     }
     
     /// Agenda atualizações automáticas em horários específicos, apenas em dias úteis
-    func scheduleDailyUpdates(at hours: [Int], updateAction: @escaping () -> Void) {
-        let calendar = Calendar.current
-        Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { _ in
-            let now = Date()
-            let currentHour = calendar.component(.hour, from: now)
-            let currentMinute = calendar.component(.minute, from: now)
-            let weekday = calendar.component(.weekday, from: now)
+    func scheduleDailyUpdates(at hours: [Int]) {
+        UNUserNotificationCenter.current().removeAllPendingNotificationRequests() // Remove notificações anteriores
+        
+        for hour in hours {
+            let content = UNMutableNotificationContent()
+            content.title = "Atualização de Taxa de Câmbio"
+            content.body = "As taxas de câmbio foram atualizadas."
+            content.sound = .default
             
-            // Verificar se é um dia útil (segunda=2, terça=3, ..., sexta=6)
-            if (2...6).contains(weekday) {
-                // Verificar se o horário corresponde a um dos horários especificados
-                if hours.contains(currentHour) && currentMinute == 0 {
-                    updateAction()
+            var dateComponents = DateComponents()
+            dateComponents.hour = hour
+            dateComponents.minute = 0
+            dateComponents.weekday = nil // Não fixa um dia específico
+            
+            // Configuração para apenas dias úteis (segunda a sexta)
+            for weekday in 2...6 { // Segunda=2, Sexta=6
+                dateComponents.weekday = weekday
+                let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
+                
+                let request = UNNotificationRequest(
+                    identifier: "update-\(hour)-\(weekday)",
+                    content: content,
+                    trigger: trigger
+                )
+                
+                UNUserNotificationCenter.current().add(request) { error in
+                    if let error = error {
+                        print("Erro ao agendar notificação: \(error.localizedDescription)")
+                    } else {
+                        print("Notificação agendada para \(hour):00 em dia \(weekday).")
+                    }
                 }
             }
         }

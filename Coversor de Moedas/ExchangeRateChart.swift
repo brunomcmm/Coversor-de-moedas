@@ -3,7 +3,7 @@
 //  Conversor de Moedas
 //
 //  Este módulo gerencia o componente do gráfico para exibir a variação das taxas de câmbio.
-//  Criado por Bruno Maciel em 29/11/2024.
+//  Criado por Bruno Maciel.
 //
 
 import SwiftUI
@@ -15,44 +15,54 @@ struct ExchangeRateChartView: View {
 
     var body: some View {
         Chart {
-            // Gráfico de linha simples
+            // Gráfico de linha com interpolação suave
             ForEach(Array(rates.enumerated()), id: \.offset) { index, rate in
                 LineMark(
-                    x: .value("Data", dates[index]),
+                    x: .value("Data", dates[safe: index] ?? ""),
                     y: .value("Taxa", rate)
                 )
-                .interpolationMethod(.cardinal) // Suaviza a linha
-                .foregroundStyle(Color.red) // Cor da linha
-                .lineStyle(StrokeStyle(lineWidth: 2)) // Linha mais fina
+                .interpolationMethod(.catmullRom) // Linha suave
+                .foregroundStyle(rate > (rates.first ?? 0) ? .green : .red) // Cor baseada no valor inicial
+                .lineStyle(StrokeStyle(lineWidth: 2)) // Define a espessura da linha
             }
         }
         .chartYAxis {
-            AxisMarks(values: .stride(by: 10)) { value in
+            AxisMarks(values: .automatic) { value in
                 AxisValueLabel {
-                    Text("\(value.as(Double.self) ?? 0.0, specifier: "%.0f")")
-                        .font(.title3) // Fonte grande para o eixo Y
-                        .foregroundColor(.primary) // Cor padrão para o texto
+                    Text("\(value.as(Double.self) ?? 0.0, specifier: "%.2f")")
+                        .font(.footnote) // Ajusta o tamanho da fonte do eixo Y
+                        .foregroundColor(.secondary) // Cor secundária
                 }
             }
         }
         .chartXAxis {
-            AxisMarks(values: Array(stride(from: 0, to: dates.count, by: 10))) { value in
+            AxisMarks(values: Array(stride(from: 0, to: dates.count, by: max(1, dates.count / 6)))) { value in
                 AxisValueLabel {
                     if let index = value.as(Int.self), index < dates.count {
                         Text(dates[index])
-                            .font(.title3) // Fonte grande para o eixo X
-                            .foregroundColor(.primary) // Cor padrão para o texto
+                            .font(.footnote) // Ajusta o tamanho da fonte do eixo X
+                            .foregroundColor(.secondary) // Cor secundária
                     }
                 }
             }
         }
-        .chartYScale(domain: calculateYAxisDomain()) // Ajusta o limite do eixo Y
+        .chartYScale(domain: calculateYAxisDomain()) // Ajusta o domínio do eixo Y
+        .frame(height: 250) // Altura do gráfico
+        .padding() // Adiciona espaçamento ao redor do gráfico
     }
 
     /// Calcula o domínio do eixo Y com base nos valores
     private func calculateYAxisDomain() -> ClosedRange<Double> {
-        let minRate = rates.min() ?? 720.0
-        let maxRate = rates.max() ?? 780.0
-        return (minRate - 5)...(maxRate + 5)
+        let minRate = rates.min() ?? 0.0
+        let maxRate = rates.max() ?? 1.0
+        let padding = (maxRate - minRate) * 0.1
+        return (minRate - padding)...(maxRate + padding)
+    }
+}
+
+// Extensão para acessar arrays de forma segura
+extension Array {
+    subscript(safe index: Int) -> Element? {
+        return indices.contains(index) ? self[index] : nil
     }
 }

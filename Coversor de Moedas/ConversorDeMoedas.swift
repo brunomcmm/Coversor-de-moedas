@@ -3,7 +3,7 @@
 //  Conversor de Moedas
 //
 //  Este módulo lida com a lógica de conversão de moedas, incluindo chamadas à API ExchangeRatesAPI.io.
-//  Criado por Bruno Maciel em 28/11/2024.
+//  Criado por Bruno Maciel.
 //
 
 import Foundation
