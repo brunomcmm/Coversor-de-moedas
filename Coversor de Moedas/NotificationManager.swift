@@ -2,7 +2,7 @@
 //  NotificationManager.swift
 //  Conversor de Moedas
 //
-//  Commit: Implementado sistema de atualizações automáticas duas vezes ao dia (10h e 12h) apenas em dias úteis (segunda a sexta).
+//  Commit: Atualizado para incluir o valor atual na notificação de atualização programada.
 //  Criado por Bruno Maciel.
 //
 
@@ -26,23 +26,24 @@ class NotificationManager {
     }
     
     /// Agenda atualizações automáticas em horários específicos, apenas em dias úteis
-    func scheduleDailyUpdates(at hours: [Int]) {
+    func scheduleDailyUpdates(at hours: [Int], fetchCurrentRate: @escaping () -> Double) {
         UNUserNotificationCenter.current().removeAllPendingNotificationRequests() // Remove notificações anteriores
         
         for hour in hours {
-            let content = UNMutableNotificationContent()
-            content.title = "Atualização de Taxa de Câmbio"
-            content.body = "As taxas de câmbio foram atualizadas."
-            content.sound = .default
-            
-            var dateComponents = DateComponents()
-            dateComponents.hour = hour
-            dateComponents.minute = 0
-            dateComponents.weekday = nil // Não fixa um dia específico
-            
-            // Configuração para apenas dias úteis (segunda a sexta)
             for weekday in 2...6 { // Segunda=2, Sexta=6
+                let content = UNMutableNotificationContent()
+                content.title = "Atualização de Taxa de Câmbio"
+                
+                // Obtém o valor atual da taxa e inclui no corpo da notificação
+                let currentRate = fetchCurrentRate()
+                content.body = "1 BRL agora vale \(String(format: "%.2f", currentRate)) COP."
+                content.sound = .default
+                
+                var dateComponents = DateComponents()
+                dateComponents.hour = hour
+                dateComponents.minute = 0
                 dateComponents.weekday = weekday
+                
                 let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
                 
                 let request = UNNotificationRequest(
@@ -62,7 +63,7 @@ class NotificationManager {
         }
     }
     
-    /// Envia uma notificação com a taxa atual
+    /// Envia uma notificação com a taxa atual (uso manual ou de emergência)
     func sendNotification(for rate: Double) {
         let content = UNMutableNotificationContent()
         content.title = "Atualização de Taxa de Câmbio"
