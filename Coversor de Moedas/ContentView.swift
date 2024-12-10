@@ -6,8 +6,7 @@
 //  atual e um gráfico de histórico.
 //  Criado por Bruno Maciel.
 //
-//  Commit: Removida entrada de valor e seleção de moeda, mantendo apenas "1 BRL para COP".
-//  Implementado suporte para agendamento de atualizações automáticas (10h e 12h) apenas em dias úteis.
+//  Commit: Alterado para usar índices numéricos em vez de datas no eixo X. Adicionado histórico inicial de 3 valores fixos.
 
 import SwiftUI
 import Charts
@@ -16,7 +15,7 @@ struct ContentView: View {
     @State private var currentRate: Double = 727.40 // Valor inicial
     @State private var previousRate: Double? = nil // Valor anterior para comparação
     @State private var storedRates: [Double] = [] // Lista de taxas armazenadas
-    @State private var storedDates: [String] = [] // Datas correspondentes às taxas
+    @State private var storedIndices: [Int] = [] // Índices correspondentes às taxas
 
     private let conversor = ConversorDeMoedas() // Instância do módulo de conversão
 
@@ -33,12 +32,17 @@ struct ContentView: View {
                 currentRateView()
 
                 // Gráfico da variação
-                ExchangeRateChartView(
-                    rates: storedRates,
-                    dates: storedDates
-                )
-                .frame(height: 200)
-                .padding()
+                if !storedRates.isEmpty && !storedIndices.isEmpty {
+                    ExchangeRateChartView(
+                        rates: storedRates,
+                        indices: storedIndices // Agora passamos os índices
+                    )
+                    .frame(height: 200)
+                    .padding()
+                } else {
+                    Text("Carregando gráfico...")
+                        .foregroundColor(.gray)
+                }
 
                 // Botão para atualizar a taxa
                 updateButton()
@@ -48,10 +52,13 @@ struct ContentView: View {
             .padding()
             .onAppear {
                 NotificationManager.shared.requestPermission()
+                initializeDefaultHistory()
                 loadStoredRates()
-                
+
                 // Agendar atualizações às 10h e 12h, de segunda a sexta
-                NotificationManager.shared.scheduleDailyUpdates(at: [10, 12])
+                NotificationManager.shared.scheduleDailyUpdates(at: [10, 12]) {
+                    currentRate
+                }
             }
         }
     }
@@ -100,16 +107,15 @@ struct ContentView: View {
                     previousRate = currentRate
                     currentRate = rate
 
-                    // Adiciona a nova taxa e data à lista
+                    // Adiciona a nova taxa e índice à lista
                     storedRates.append(rate)
-                    storedDates.append(generateDate())
+                    let nextIndex = (storedIndices.last ?? 0) + 1
+                    storedIndices.append(nextIndex)
 
                     // Mantém no máximo 160 entradas
                     if storedRates.count > 160 {
                         storedRates.removeFirst()
-                    }
-                    if storedDates.count > 160 {
-                        storedDates.removeFirst()
+                        storedIndices.removeFirst()
                     }
 
                     saveStoredRates()
@@ -121,36 +127,31 @@ struct ContentView: View {
         }
     }
 
+    // Inicializa o histórico padrão
+    private func initializeDefaultHistory() {
+        if storedRates.isEmpty && storedIndices.isEmpty {
+            storedRates = [700, 715, 730]
+            storedIndices = [1, 2, 3]
+        }
+    }
+
     // Salvar as taxas armazenadas
     private func saveStoredRates() {
         UserDefaults.standard.set(storedRates, forKey: "storedRates")
-        UserDefaults.standard.set(storedDates, forKey: "storedDates")
+        UserDefaults.standard.set(storedIndices, forKey: "storedIndices")
     }
 
     // Carregar as taxas armazenadas
     private func loadStoredRates() {
         if let rates = UserDefaults.standard.array(forKey: "storedRates") as? [Double],
-           let dates = UserDefaults.standard.array(forKey: "storedDates") as? [String] {
+           let indices = UserDefaults.standard.array(forKey: "storedIndices") as? [Int] {
             storedRates = rates
-            storedDates = dates
-        }
-
-        // Verifica se há ao menos um dado para exibição
-        if storedRates.isEmpty || storedDates.isEmpty {
-            storedRates = [currentRate]
-            storedDates = [generateDate()]
+            storedIndices = indices
         }
 
         // Define o valor atual e o anterior
         currentRate = storedRates.last ?? 727.40
         previousRate = storedRates.dropLast().last
-    }
-
-    // Gera a data atual para exibição no gráfico
-    private func generateDate() -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "dd MMM"
-        return formatter.string(from: Date())
     }
 }
 

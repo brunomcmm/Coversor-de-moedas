@@ -11,19 +11,19 @@ import Charts
 
 struct ExchangeRateChartView: View {
     let rates: [Double]
-    let dates: [String] // Datas correspondentes às taxas
+    let indices: [Int] // Índices numéricos correspondentes às taxas
 
     var body: some View {
         Chart {
-            // Gráfico de linha com interpolação suave
+            // Gráfico de linha
             ForEach(Array(rates.enumerated()), id: \.offset) { index, rate in
                 LineMark(
-                    x: .value("Data", dates[safe: index] ?? ""),
+                    x: .value("Índice", indices[safe: index] ?? 0),
                     y: .value("Taxa", rate)
                 )
-                .interpolationMethod(.catmullRom) // Linha suave
-                .foregroundStyle(rate > (rates.first ?? 0) ? .green : .red) // Cor baseada no valor inicial
-                .lineStyle(StrokeStyle(lineWidth: 2)) // Define a espessura da linha
+                .interpolationMethod(.linear) // Linha reta entre os pontos
+                .foregroundStyle(.blue) // Cor da linha
+                .lineStyle(StrokeStyle(lineWidth: 2)) // Espessura da linha
             }
         }
         .chartYAxis {
@@ -36,10 +36,10 @@ struct ExchangeRateChartView: View {
             }
         }
         .chartXAxis {
-            AxisMarks(values: Array(stride(from: 0, to: dates.count, by: max(1, dates.count / 6)))) { value in
+            AxisMarks(values: .automatic) { value in
                 AxisValueLabel {
-                    if let index = value.as(Int.self), index < dates.count {
-                        Text(dates[index])
+                    if let index = value.as(Int.self) {
+                        Text("\(index)")
                             .font(.footnote) // Ajusta o tamanho da fonte do eixo X
                             .foregroundColor(.secondary) // Cor secundária
                     }

@@ -3,6 +3,7 @@
 //  Conversor de Moedas
 //
 //  Commit: Atualizado para incluir o valor atual na notificação de atualização programada.
+//  Melhorado o tratamento de erros e validações.
 //  Criado por Bruno Maciel.
 //
 
@@ -17,10 +18,12 @@ class NotificationManager {
     /// Solicita permissão para notificações
     func requestPermission() {
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
-            if granted {
-                print("Permissão concedida para notificações.")
-            } else if let error = error {
-                print("Erro ao solicitar permissão: \(error.localizedDescription)")
+            DispatchQueue.main.async {
+                if granted {
+                    print("Permissão concedida para notificações.")
+                } else if let error = error {
+                    print("Erro ao solicitar permissão: \(error.localizedDescription)")
+                }
             }
         }
     }
@@ -35,7 +38,7 @@ class NotificationManager {
                 content.title = "Atualização de Taxa de Câmbio"
                 
                 // Obtém o valor atual da taxa e inclui no corpo da notificação
-                let currentRate = fetchCurrentRate()
+                let currentRate = fetchCurrentRate() > 0 ? fetchCurrentRate() : 727.40
                 content.body = "1 BRL agora vale \(String(format: "%.2f", currentRate)) COP."
                 content.sound = .default
                 
@@ -47,14 +50,14 @@ class NotificationManager {
                 let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
                 
                 let request = UNNotificationRequest(
-                    identifier: "update-\(hour)-\(weekday)",
+                    identifier: "update-\(hour)-\(weekday)-\(UUID().uuidString)", // Identificador único
                     content: content,
                     trigger: trigger
                 )
                 
                 UNUserNotificationCenter.current().add(request) { error in
-                    if let error = error {
-                        print("Erro ao agendar notificação: \(error.localizedDescription)")
+                    if let error = error as? NSError {
+                        print("Erro ao agendar notificação: \(error.localizedDescription) (Code: \(error.code))")
                     } else {
                         print("Notificação agendada para \(hour):00 em dia \(weekday).")
                     }
